@@ -1,25 +1,41 @@
 from youtube_transcript_api import YouTubeTranscriptApi
-import sys
 import os
+import time
 
-video_id = sys.argv[1]
-author = sys.argv[2]
-
-# fetch transcript
 api = YouTubeTranscriptApi()
-transcript = api.fetch(video_id)
 
-text = "\n".join([t.text for t in transcript])
+INPUT_FILE = "scripts/video_list.txt"
+BASE_DIR = "research/youtube-transcripts"
 
-# create folder if not exists
-folder_path = f"research/youtube-transcripts/{author}"
-os.makedirs(folder_path, exist_ok=True)
+with open(INPUT_FILE, "r") as file:
+    lines = file.readlines()
 
-# save file
-file_path = f"{folder_path}/{video_id}.md"
+for line in lines:
+    # skip empty lines
+    if not line.strip():
+        continue
 
-with open(file_path, "w", encoding="utf-8") as f:
-    f.write(f"# Video ID: {video_id}\n\n")
-    f.write(text)
+    try:
+        author, video_id = line.strip().split()
 
-print(f"Saved: {file_path}")
+        transcript = api.fetch(video_id)
+        text = "\n".join([t.text for t in transcript])
+
+        # create folder per author
+        folder_path = os.path.join(BASE_DIR, author)
+        os.makedirs(folder_path, exist_ok=True)
+
+        file_path = os.path.join(folder_path, f"{video_id}.md")
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(f"# Video ID: {video_id}\n")
+            f.write(f"# Author: {author}\n\n")
+            f.write(text)
+
+        print(f"[SUCCESS] Saved: {file_path}")
+
+    except Exception as e:
+        print(f"[FAILED] {line.strip()} → {e}")
+
+    # avoid IP blocking
+    time.sleep(2)
